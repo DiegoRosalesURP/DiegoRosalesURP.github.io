@@ -5,6 +5,12 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
   "forwardPorts": [8080],
-  "postCreateCommand": "docker compose build",
+  "portsAttributes": {
+    "8080": {
+      "label": "Perfil web",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "docker compose build && docker compose up -d",
   "remoteUser": "vscode"
 }
