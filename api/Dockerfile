@@ -1,16 +1,31 @@
-#Se usa una imagen pequeña de python.
-FROM python:3.12-slim
-#Establece /app como directorio de trabajo del contenedor.
-WORKDIR /app
-# copiamos las dependencias.
+FROM alpine:3.22 AS builder
+
+RUN apk add --no-cache python3 py3-pip
+
+WORKDIR /build
+
 COPY requirements.txt .
-#instalamos las dependencias y evita conservar la caché de pip dentro de la imagen.
-RUN pip install --no-cache-dir -r requirements.txt
-#copiamos el código de la aplicación al contenedor.
+
+RUN python3 -m venv /venv \
+    && /venv/bin/pip install --no-cache-dir -r requirements.txt \
+    && find /venv -type d -name "__pycache__" -prune -exec rm -rf {} + \
+    && find /venv -type f -name "*.pyc" -delete
+
+
+FROM alpine:3.22
+
+RUN apk add --no-cache python3
+
+WORKDIR /app
+
+COPY --from=builder /venv /venv
 COPY app.py .
-#Hace que la aplicación no se ejecute como root
+
+ENV PATH="/venv/bin:$PATH"
+ENV PYTHONDONTWRITEBYTECODE=1
+
 USER nobody
-#Expone el puerto 3000 para que pueda ser accedido desde fuera del contenedor.
+
 EXPOSE 3000
-# El comando CMD indica a Docker cómo ejecutar la aplicación. En este caso, se utiliza Gunicorn para servir la aplicación Flask en el puerto 3000.
+
 CMD ["gunicorn", "--bind", "0.0.0.0:3000", "app:app"]
