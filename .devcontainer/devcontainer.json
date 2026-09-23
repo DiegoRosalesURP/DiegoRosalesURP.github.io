@@ -1,10 +1,8 @@
 {
   "name": "LAB-02 Perfil",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "image": "mcr.microsoft.com/devcontainers/base:2.2.1-bookworm",
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {
-      "moby": false
-    }
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
   "forwardPorts": [8080],
   "portsAttributes": {
@@ -13,6 +11,7 @@
       "onAutoForward": "openBrowser"
     }
   },
-  "postCreateCommand": "docker compose build && docker compose up -d",
+  "postCreateCommand": "docker compose build",
+  "postStartCommand": "bash .devcontainer/iniciar-servicios.sh",
   "remoteUser": "vscode"
 }
