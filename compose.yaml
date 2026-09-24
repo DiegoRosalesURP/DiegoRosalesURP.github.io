@@ -8,6 +8,8 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    networks:
+      - red_frontend
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
       interval: 10s
@@ -28,6 +30,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - red_frontend
+      - red_backend
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
       interval: 10s
@@ -44,6 +49,8 @@ services:
       POSTGRES_PASSWORD: app123
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - red_backend
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app -d libro"]
       interval: 10s
@@ -53,3 +60,7 @@ services:
 
 volumes:
   postgres_data:
+
+networks:
+  red_frontend:
+  red_backend:
