@@ -11,7 +11,7 @@
       "onAutoForward": "openBrowser"
     }
   },
-  "postCreateCommand": "docker compose build",
+  "postCreateCommand": "bash .devcontainer/generar-env.sh && docker compose build",
   "postStartCommand": "bash .devcontainer/iniciar-servicios.sh",
   "remoteUser": "vscode"
 }
