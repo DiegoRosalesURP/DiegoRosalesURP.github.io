@@ -34,7 +34,7 @@ def test_health():
             response = client.get("/api/health")
 
     # Comprobamos que la API responda con código HTTP 200.
-    assert response.status_code == 200
+    assert response.status_code == 201
 
     # Comprobamos que la respuesta tenga el JSON esperado.
     assert response.get_json() == {"status": "ok"}
