@@ -1,0 +1,21 @@
+{
+  "name": "perfil",
+  "version": "1.0.0",
+  "description": "Sitio personal publicado en https://DiegoRosalesURP.github.io",
+  "main": "libro-de-visitas.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "vitest run tests"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "htmlhint": "^1.9.2",
+    "jsdom": "^27.0.1",
+    "vitest": "^4.1.11"
+  },
+  "type": "module"
+}
