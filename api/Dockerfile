@@ -1,4 +1,4 @@
-FROM alpine AS builder
+FROM alpine:3.22 AS builder
 
 RUN apk add --no-cache \
     python3=3.12.15-r0 \
