@@ -1,0 +1,4 @@
+# DL3066 se ignora porque las imágenes utilizan usuarios válidos
+# definidos por las imágenes base: nobody y postgres.
+ignored:
+  - DL3066

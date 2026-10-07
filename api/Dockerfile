@@ -1,6 +1,8 @@
 FROM alpine:3.22 AS builder
 
-RUN apk add --no-cache python3 py3-pip
+RUN apk add --no-cache \
+    python3=3.12.15-r0 \
+    py3-pip=25.1.1-r0
 
 WORKDIR /build
 
@@ -14,7 +16,7 @@ RUN python3 -m venv /venv \
 
 FROM alpine:3.22
 
-RUN apk add --no-cache python3
+RUN apk add --no-cache python3=3.12.15-r0
 
 WORKDIR /app
 
