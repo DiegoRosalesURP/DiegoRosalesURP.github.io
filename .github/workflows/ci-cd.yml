@@ -24,6 +24,13 @@ jobs:
           node-version: "20"
           cache: npm
 
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: api/requirements.txt
+
       - name: Instalar dependencias
         run: npm ci
 
@@ -109,6 +116,13 @@ jobs:
           node-version: "20"
           cache: npm
 
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: api/requirements.txt
+
       - name: Instalar dependencias
         run: npm ci
 
@@ -120,11 +134,6 @@ jobs:
 
       - name: Ejecutar pruebas del sitio
         run: npm test
-
-      - name: Configurar Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
 
       - name: Instalar dependencias de API
         run: pip install -r api/requirements.txt
@@ -141,6 +150,16 @@ jobs:
       contents: read
       packages: write
 
+    strategy:
+      matrix:
+        include:
+          - name: web
+            context: .
+            file: web/Dockerfile
+          - name: api
+            context: ./api
+            file: ./api/Dockerfile
+
     steps:
       - name: Descargar código
         uses: actions/checkout@v4
@@ -152,39 +171,29 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generar metadatos de imagen web
-        id: meta-web
+      - name: Generar metadatos de imagen
+        id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/perfil-web
+          images: ghcr.io/${{ github.repository_owner }}/perfil-${{ matrix.name }}
           tags: |
             type=sha,prefix=sha-,format=short
 
-      - name: Generar metadatos de imagen API
-        id: meta-api
-        uses: docker/metadata-action@v5
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
         with:
-          images: ghcr.io/${{ github.repository_owner }}/perfil-api
-          tags: |
-            type=sha,prefix=sha-,format=short
+          driver: docker-container
 
-      - name: Construir y publicar imagen web
+      - name: Construir y publicar imagen
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: web/Dockerfile
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
           push: true
-          tags: ${{ steps.meta-web.outputs.tags }}
-          labels: ${{ steps.meta-web.outputs.labels }}
-
-      - name: Construir y publicar imagen API
-        uses: docker/build-push-action@v6
-        with:
-          context: ./api
-          file: ./api/Dockerfile
-          push: true
-          tags: ${{ steps.meta-api.outputs.tags }}
-          labels: ${{ steps.meta-api.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=min,scope=${{ matrix.name }}
 
   security:
     name: Security
@@ -195,8 +204,14 @@ jobs:
       contents: read
       packages: read
 
+    strategy:
+      matrix:
+        image:
+          - web
+          - api
+
     steps:
-      - name: Generar tag de las imágenes
+      - name: Generar tag de la imagen
         run: echo "IMAGE_TAG=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
       - name: Iniciar sesión en GHCR
@@ -206,21 +221,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Escanear imagen web con Trivy
+      - name: Escanear imagen con Trivy
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: image
-          image-ref: "ghcr.io/diegorosalesurp/perfil-web:${{ env.IMAGE_TAG }}"
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-          format: table
-
-      - name: Escanear imagen API con Trivy
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          scan-type: image
-          image-ref: "ghcr.io/diegorosalesurp/perfil-api:${{ env.IMAGE_TAG }}"
+          image-ref: "ghcr.io/diegorosalesurp/perfil-${{ matrix.image }}:${{ env.IMAGE_TAG }}"
           severity: CRITICAL
           ignore-unfixed: true
           exit-code: "1"
