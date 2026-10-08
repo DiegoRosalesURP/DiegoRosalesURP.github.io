@@ -232,8 +232,53 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Preparar pruebas smoke
-        run: echo "Etapa smoke preparada para B6"
+      - name: Generar tag de la imagen
+        run: echo "IMAGE_TAG=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: Iniciar sesión en GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Descargar imagen web publicada
+        run: docker pull "ghcr.io/diegorosalesurp/perfil-web:${IMAGE_TAG}"
+
+      - name: Levantar contenedor web
+        run: |
+          docker run -d \
+            --name smoke-web \
+            -p 8080:8080 \
+            "ghcr.io/diegorosalesurp/perfil-web:${IMAGE_TAG}"
+
+      - name: Ejecutar smoke test
+        run: |
+          for i in {1..30}; do
+            if curl --fail --silent http://localhost:8080/ > response.html; then
+              echo "El sitio respondió correctamente."
+              break
+            fi
+
+            if [ "$i" -eq 30 ]; then
+              echo "El sitio no respondió dentro del tiempo permitido."
+              docker logs smoke-web
+              exit 1
+            fi
+
+            sleep 1
+          done
+
+          echo "Código HTTP:"
+          curl --silent --output /dev/null --write-out "%{http_code}\n" http://localhost:8080/
+
+          grep -q "Diego Alejandro Rosales Enciso" response.html
+
+          echo "Smoke test exitoso: HTTP 200 y nombre encontrado."
+
+      - name: Limpiar contenedor
+        if: always()
+        run: docker rm -f smoke-web
 
   deploy-prod:
     name: Deploy
