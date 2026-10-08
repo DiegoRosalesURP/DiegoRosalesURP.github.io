@@ -16,6 +16,8 @@ RUN python3 -m venv /venv \
 
 FROM alpine:3.22
 
+LABEL org.opencontainers.image.source="https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io"
+
 RUN apk add --no-cache python3=3.12.15-r0
 
 WORKDIR /app
