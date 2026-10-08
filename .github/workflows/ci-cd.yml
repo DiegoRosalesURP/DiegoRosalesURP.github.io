@@ -130,7 +130,7 @@ jobs:
         run: pip install -r api/requirements.txt
 
       - name: Ejecutar pruebas de API
-        run: pytest tests/test_api.py
+        run: PYTHONPATH=. pytest tests/test_api.py
 
   package:
     needs: test
