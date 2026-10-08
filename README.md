@@ -319,11 +319,3 @@ sha256:bb096d35fd640c4c3a19249b857fdf64745e1f16a3794e4ce44201d90d4414d3
 ```
 
 * **Qué no me funcionó:** En el primer intento, `.env.example` contenía accidentalmente caracteres de un comando de PowerShell (`@"` y `"@ | Set-Content`). Esto impedía que un Codespace nuevo generara correctamente `.env`. Se corrigió mediante una rama independiente y un Pull Request. Después de la corrección, un Codespace nuevo inició los servicios correctamente y el guestbook funcionó.
-
-## Delivery o deployment
-
-En este proyecto, el pipeline implementa **Continuous Delivery**, porque cada cambio que llega a `main` pasa por las etapas de Build, Test, Package, Security y Smoke, quedando listo para ser publicado en producción. Sin embargo, el despliegue a GitHub Pages requiere una aprobación manual mediante el environment `github-pages`.
-
-Para pasar a **Continuous Deployment**, eliminaría la aprobación manual del environment `github-pages`, de modo que todo cambio que llegue a `main` y supere correctamente todas las validaciones sea desplegado automáticamente en producción.
-
-No aplicaría Continuous Deployment en sistemas donde un cambio en producción requiera revisión humana, por ejemplo, cuando existen requisitos regulatorios, cambios críticos de seguridad, migraciones de datos o funcionalidades con alto impacto para los usuarios. En esos casos, mantendría Continuous Delivery para conservar una etapa de aprobación antes del despliegue.
