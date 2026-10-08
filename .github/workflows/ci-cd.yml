@@ -231,8 +231,15 @@ jobs:
     needs: security
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      packages: read
+
     steps:
-      - name: Generar tag de la imagen
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Generar tag de las imágenes
         run: echo "IMAGE_TAG=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
       - name: Iniciar sesión en GHCR
@@ -245,40 +252,57 @@ jobs:
       - name: Descargar imagen web publicada
         run: docker pull "ghcr.io/diegorosalesurp/perfil-web:${IMAGE_TAG}"
 
-      - name: Levantar contenedor web
+      - name: Descargar imagen API publicada
+        run: docker pull "ghcr.io/diegorosalesurp/perfil-api:${IMAGE_TAG}"
+
+      - name: Configurar variables de prueba
         run: |
-          docker run -d \
-            --name smoke-web \
-            -p 8080:8080 \
-            "ghcr.io/diegorosalesurp/perfil-web:${IMAGE_TAG}"
+          echo "POSTGRES_DB=perfil" >> "$GITHUB_ENV"
+          echo "POSTGRES_USER=perfil" >> "$GITHUB_ENV"
+          echo "POSTGRES_PASSWORD=perfil" >> "$GITHUB_ENV"
+
+      - name: Crear configuración Compose para smoke
+        run: |
+          cat > compose.smoke.yml <<'EOF'
+          services:
+            web:
+              image: ghcr.io/diegorosalesurp/perfil-web:${IMAGE_TAG}
+              build: null
+
+            api:
+              image: ghcr.io/diegorosalesurp/perfil-api:${IMAGE_TAG}
+              build: null
+
+            db:
+              image: postgres:16-alpine
+              build: null
+          EOF
+
+      - name: Levantar entorno smoke
+        run: docker compose -f compose.yaml -f compose.smoke.yml up -d --wait
 
       - name: Ejecutar smoke test
         run: |
-          for i in {1..30}; do
-            if curl --fail --silent http://localhost:8080/ > response.html; then
-              echo "El sitio respondió correctamente."
-              break
-            fi
+          status=$(curl --silent --output response.html --write-out "%{http_code}" http://localhost:8080/)
 
-            if [ "$i" -eq 30 ]; then
-              echo "El sitio no respondió dentro del tiempo permitido."
-              docker logs smoke-web
-              exit 1
-            fi
+          echo "Código HTTP: $status"
 
-            sleep 1
-          done
+          if [ "$status" != "200" ]; then
+            echo "El sitio no respondió con HTTP 200."
+            exit 1
+          fi
 
-          echo "Código HTTP:"
-          curl --silent --output /dev/null --write-out "%{http_code}\n" http://localhost:8080/
-
-          grep -q "Diego Alejandro Rosales Enciso" response.html
+          grep -Fq "Diego Alejandro Rosales Enciso" response.html
 
           echo "Smoke test exitoso: HTTP 200 y nombre encontrado."
 
-      - name: Limpiar contenedor
+      - name: Mostrar logs si falla el smoke
+        if: failure()
+        run: docker compose -f compose.yaml -f compose.smoke.yml logs
+
+      - name: Limpiar entorno smoke
         if: always()
-        run: docker rm -f smoke-web
+        run: docker compose -f compose.yaml -f compose.smoke.yml down -v --remove-orphans
 
   deploy-prod:
     name: Deploy
