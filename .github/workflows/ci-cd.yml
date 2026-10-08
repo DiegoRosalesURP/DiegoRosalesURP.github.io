@@ -88,13 +88,49 @@ jobs:
         with:
           path: _site
 
+      - name: Subir artifact para pruebas
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: _site
+
   test:
+    name: Test
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Preparar etapa de pruebas
-        run: echo "Etapa de pruebas preparada para B3"
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Descargar sitio generado
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: _site
+
+      - name: Ejecutar pruebas del sitio
+        run: npm test
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias de API
+        run: pip install -r api/requirements.txt
+
+      - name: Ejecutar pruebas de API
+        run: pytest tests/test_api.py
 
   package:
     needs: test
