@@ -13,8 +13,9 @@ Cada push a `main` despliega automáticamente con GitHub Pages.
 ## Historial del curso
 - **S02** — Sitio inicial, ramas y pull requests
 - **S03** — Libro de visitas en tres contenedores, Compose, Codespaces y los seis retos
+- **S04** — Automatización del pipeline de Integración y Despliegue Continuos (CI/CD) con empaquetamiento y escaneo de seguridad.
 
-## Bitácora de decisiones
+## Bitácora de decisiones - LAB 2
 
 ### Reto 1: Reducir la imagen de la API con multi-stage build
 
@@ -327,3 +328,32 @@ En este proyecto, el pipeline implementa **Continuous Delivery**, porque cada ca
 Para pasar a **Continuous Deployment**, eliminaría la aprobación manual del environment `github-pages`, de modo que todo cambio que llegue a `main` y supere correctamente todas las validaciones sea desplegado automáticamente en producción.
 
 No aplicaría Continuous Deployment en sistemas donde un cambio en producción requiera revisión humana, por ejemplo, cuando existen requisitos regulatorios, cambios críticos de seguridad, migraciones de datos o funcionalidades con alto impacto para los usuarios. En esos casos, mantendría Continuous Delivery para conservar una etapa de aprobación antes del despliegue.
+
+## Bitácora de decisiones - LAB 3
+
+### Reto 1: Reducir el tiempo de ejecución del pipeline
+
+* **Decisión:** Se optimizó el pipeline incorporando caché para las dependencias de npm y Python, caché de capas Docker mediante Buildx y GitHub Actions, y ejecución en paralelo de las imágenes Web/API y sus respectivos análisis de seguridad. Finalmente, se utilizó `mode=min` para reducir el tiempo de exportación de la caché Docker.
+
+* **Alternativas que evalué:**
+
+  * **Mantener el pipeline sin cachés:** era la opción más sencilla, pero obligaba a reinstalar dependencias y reconstruir capas en cada ejecución, aumentando el tiempo total.
+  * **Utilizar `mode=max` en la caché Docker:** permite conservar más capas intermedias y puede aumentar los aciertos de caché, pero genera una caché mayor y aumenta el tiempo necesario para exportarla.
+  * **Utilizar `mode=min` en la caché Docker:** conserva las capas necesarias para la imagen final y reduce el tamaño de la caché, disminuyendo el tiempo de exportación, aunque puede ofrecer menos capas reutilizables que `mode=max`.
+  * **Construir Web y API de forma secuencial:** simplifica el workflow, pero aumenta el tiempo total porque ambas imágenes son independientes y pueden procesarse en paralelo mediante una matriz.
+
+* **Por qué elegí esta:** Se eligió `mode=min` después de revisar los logs de Buildx y observar que la exportación de la caché Docker representaba una parte importante del tiempo de construcción. Además, se mantuvo la ejecución paralela mediante matrices para Web/API y Security, sin eliminar ninguna validación del pipeline. Esta combinación permitió reducir considerablemente el tiempo de ejecución manteniendo las etapas y controles establecidos.
+
+* **Fuentes consultadas:** [Docker — Cache storage backends](https://docs.docker.com/build/cache/backends/), [GitHub Actions — Dependency caching](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching) y [GitHub Actions — Running variations of jobs](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/run-job-variations).
+
+* **Cómo lo verifiqué:** Se comparó una ejecución exitosa anterior a las optimizaciones con una ejecución posterior utilizando la configuración optimizada.
+
+  **Ejecución original:** [Actions run 37737121464](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37737121464)
+  Duración total: **3 min 11 s (191 s)**. Build y lint: 23 s, Test: 22 s, Package: 41 s, Security: 17 s y Smoke: 43 s.
+
+  **Ejecución optimizada:** [Actions run 37849617438](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37849617438)
+  Duración total: **2 min 17 s (137 s)**. Build y lint: 19 s, Test: 18 s, Package y Security ejecutados mediante matrices en paralelo, y Smoke: 37 s.
+
+  La reducción obtenida fue de **54 segundos**, equivalente aproximadamente a **28,3 %** respecto de la ejecución original. El resultado quedó muy próximo al objetivo del 30 %.
+
+* **Qué no me funcionó:** Inicialmente se utilizó `cache-to` con `mode=max`, pero la ejecución todavía tenía un tiempo elevado. Al revisar los logs de Buildx se observó que la exportación de la caché podía consumir varios segundos. Además, en el primer intento de utilizar la caché `gha` apareció un error porque el driver Docker predeterminado no permitía exportar la caché; se solucionó configurando `docker/setup-buildx-action` con el driver `docker-container`. Posteriormente se cambió a `mode=min`, logrando una mejora considerable, especialmente en la construcción de la API. Se realizaron varias ejecuciones para comprobar la variabilidad de GitHub Actions y el resultado final se mantuvo alrededor de 2 min 17 s. No se realizaron modificaciones adicionales al Smoke Test porque su función es verificar que las imágenes publicadas y los servicios funcionen correctamente.
