@@ -319,5 +319,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Preparar despliegue
-        run: echo "Etapa de despliegue preparada para B7"
+      - name: Publicar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
