@@ -339,6 +339,8 @@ jobs:
             db:
               image: postgres:16-alpine
               build: null
+              volumes:
+                - ./db/init:/docker-entrypoint-initdb.d:ro
           EOF
 
       - name: Validar configuración Compose
