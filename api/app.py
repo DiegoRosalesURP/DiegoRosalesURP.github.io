@@ -25,15 +25,11 @@ def conectar():
     return psycopg.connect(**DB, row_factory=dict_row)
 
 
+
 @app.get("/api/health")
 def health():
-    # "Estoy vivo" no alcanza: si no puedo hablar con la base, no estoy sano.
-    try:
-        with conectar() as con:
-            con.execute("SELECT 1")
-        return jsonify(status="ok")
-    except psycopg.Error as e:
-        return jsonify(status="error", detalle=str(e).strip()), 503
+    # FALLA INTENCIONAL PARA PROBAR EL PIPELINE.
+    return jsonify(status="error"), 500
 
 
 @app.get("/api/mensajes")
