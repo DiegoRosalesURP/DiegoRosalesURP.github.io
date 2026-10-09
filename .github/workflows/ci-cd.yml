@@ -6,6 +6,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -375,10 +376,13 @@ jobs:
         if: always()
         run: docker compose -f compose.yaml -f compose.smoke.yml down -v --remove-orphans
 
+
   deploy-prod:
     name: Deploy
     needs: smoke
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -392,3 +396,41 @@ jobs:
       - name: Publicar en GitHub Pages
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+
+      - name: Verificar sitio publicado
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "URL publicada: $PAGE_URL"
+
+          for intento in {1..10}; do
+            status=$(curl --silent --show-error \
+              --output pagina.html \
+              --write-out "%{http_code}" \
+              "$PAGE_URL") || status="000"
+
+            if [ "$status" = "200" ] &&
+               grep -Fq "Diego Alejandro Rosales Enciso" pagina.html; then
+              echo "OK: HTTP 200 y nombre encontrado."
+              break
+            fi
+
+            echo "Intento $intento/10: HTTP $status; esperando 5 segundos..."
+
+            if [ "$intento" -eq 10 ]; then
+              echo "ERROR: el sitio no pasó la verificación."
+              cat pagina.html 2>/dev/null || true
+              exit 1
+            fi
+
+            sleep 5
+          done
+
+          curl --fail --silent --show-error \
+            "$PAGE_URL/libro-de-visitas.js" \
+            --output libro-de-visitas.js
+
+          echo "OK: el JavaScript del libro de visitas se publica correctamente."
