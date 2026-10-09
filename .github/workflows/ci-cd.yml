@@ -236,8 +236,8 @@ jobs:
           exit-code: "0"
 
       - name: Publicar resultados de Trivy en Code Scanning
-        uses: github/codeql-action/upload-sarif@v4
         if: always() && hashFiles(format('trivy-{0}.sarif', matrix.image)) != ''
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-${{ matrix.image }}.sarif
           category: trivy-${{ matrix.image }}
@@ -290,7 +290,7 @@ jobs:
           category: semgrep-python-javascript
 
   smoke:
-    name: Smoke
+    name: Smoke e integración API
     needs: [security, sast]
     runs-on: ubuntu-latest
 
@@ -339,29 +339,42 @@ jobs:
             db:
               image: postgres:16-alpine
               build: null
+              volumes:
+                - ./db/init:/docker-entrypoint-initdb.d:ro
           EOF
+
+      - name: Validar configuración Compose
+        run: docker compose -f compose.yaml -f compose.smoke.yml config -q
 
       - name: Levantar entorno smoke
         run: docker compose -f compose.yaml -f compose.smoke.yml up -d --wait
 
-      - name: Ejecutar smoke test
+      - name: Verificar sitio web
         run: |
-          status=$(curl --silent --output response.html --write-out "%{http_code}" http://localhost:8080/)
-          echo "Código HTTP: $status"
+          status=$(curl --silent --show-error \
+            --output response.html \
+            --write-out "%{http_code}" \
+            http://localhost:8080/)
+
+          echo "Código HTTP del sitio: $status"
 
           if [ "$status" != "200" ]; then
             echo "El sitio no respondió con HTTP 200."
+            cat response.html
             exit 1
           fi
 
           grep -Fq "Diego Alejandro Rosales Enciso" response.html
-          echo "Smoke test exitoso: HTTP 200 y nombre encontrado."
+          echo "Sitio web disponible y nombre encontrado."
 
-      - name: Mostrar logs si falla el smoke
+      - name: Ejecutar pruebas de integración API
+        run: bash tests/integration-api.sh
+
+      - name: Mostrar logs si falla la integración
         if: failure()
-        run: docker compose -f compose.yaml -f compose.smoke.yml logs
+        run: docker compose -f compose.yaml -f compose.smoke.yml logs --no-color
 
-      - name: Limpiar entorno smoke
+      - name: Limpiar entorno de integración
         if: always()
         run: docker compose -f compose.yaml -f compose.smoke.yml down -v --remove-orphans
 
