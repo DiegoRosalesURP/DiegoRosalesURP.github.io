@@ -133,13 +133,38 @@ jobs:
           path: _site
 
       - name: Ejecutar pruebas del sitio
+        id: test_sitio
         run: npm test
 
       - name: Instalar dependencias de API
         run: pip install -r api/requirements.txt
 
       - name: Ejecutar pruebas de API
+        id: test_api
         run: PYTHONPATH=. pytest tests/test_api.py
+
+      - name: Resumir resultados de pruebas
+        if: always()
+        env:
+          SITIO: ${{ steps.test_sitio.outcome }}
+          API: ${{ steps.test_api.outcome }}
+        run: |
+          {
+            echo "## 🧪 Resumen de pruebas"
+            echo ""
+            echo "| Prueba | Resultado |"
+            echo "|---|---|"
+            for prueba in SITIO API; do
+              resultado="${!prueba}"
+              if [ "$resultado" = "success" ]; then
+                echo "| $prueba | ✅ Correcto |"
+              elif [ "$resultado" = "failure" ]; then
+                echo "| $prueba | ❌ Fallido |"
+              else
+                echo "| $prueba | ⚠️ ${resultado:-No ejecutado} |"
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
 
   package:
     name: Package
@@ -241,6 +266,31 @@ jobs:
         with:
           sarif_file: trivy-${{ matrix.image }}.sarif
           category: trivy-${{ matrix.image }}
+
+      - name: Generar resumen de vulnerabilidades
+        id: resumen_trivy
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        with:
+          scan-type: image
+          image-ref: ghcr.io/diegorosalesurp/perfil-${{ matrix.image }}:${{ env.IMAGE_TAG }}
+          trivyignores: .trivyignore
+          format: template
+          template: "@.github/trivy/resumen.tpl"
+          output: resumen-trivy.md
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          exit-code: "0"
+
+      - name: Añadir vulnerabilidades al resumen
+        if: always() && hashFiles('resumen-trivy.md') != ''
+        env:
+          IMAGEN: ${{ matrix.image }}
+        run: |
+          {
+            echo "## 🔐 Vulnerabilidades: ${IMAGEN}"
+            echo ""
+            cat resumen-trivy.md
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Bloquear vulnerabilidades críticas corregibles
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
