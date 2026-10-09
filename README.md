@@ -400,3 +400,41 @@ No aplicaría Continuous Deployment en sistemas donde un cambio en producción r
 
   * [Documentación de Docker Compose](https://docs.docker.com/compose/)
   * [Documentación de la imagen oficial de PostgreSQL](https://hub.docker.com/_/postgres)
+
+  ### Reto 4: Mínimo privilegio y cadena de suministro
+
+* **Decisión:** Se definieron permisos específicos para cada job del pipeline CI/CD, se fijaron las acciones de GitHub a SHA completos y se configuró Dependabot para revisar semanalmente las actualizaciones de GitHub Actions. Con ello se busca reducir los riesgos de seguridad asociados a las dependencias y al uso de permisos excesivos.
+
+* **Alternativas que evalué:**
+
+  * **Mantener las acciones con etiquetas de versión (`@v4`, `@v5`, etc.):** facilita la lectura y el mantenimiento del workflow, pero una etiqueta puede cambiar de referencia y permitir que se ejecute código diferente al esperado.
+  * **Utilizar `permissions: write-all`:** simplifica la configuración al conceder permisos amplios, pero aumenta el impacto potencial si una acción o un paso del workflow se ve comprometido.
+  * **Fijar las acciones a SHA completos y limitar los permisos por job:** permite utilizar commits específicos y restringe el acceso de cada job a los recursos que necesita. Como desventaja, las actualizaciones requieren revisar y cambiar los SHA, tarea que puede facilitarse mediante Dependabot.
+
+* **Por qué elegí esta:** Elegí fijar las acciones a SHA completos y aplicar el principio de mínimo privilegio porque ambas medidas reducen la exposición del pipeline a cambios inesperados y accesos innecesarios. Además, Dependabot ayuda a identificar actualizaciones disponibles para mantener las dependencias al día, sin renunciar a la revisión de los cambios antes de integrarlos.
+
+* **Fuentes consultadas:**
+
+  * [GitHub Docs: referencia segura de acciones mediante SHA](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-third-party-actions)
+  * [GitHub Docs: control de permisos de `GITHUB_TOKEN`](https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication)
+  * [GitHub Docs: configuración de Dependabot para GitHub Actions](https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#package-ecosystem)
+  * [GitHub Security Advisory: CVE-2025-30066](https://github.com/advisories/GHSA-mrrh-fwg8-r2c3)
+
+* **Cómo lo verifiqué:** Se comprobó que las 25 referencias `uses:` del workflow utilizaran SHA de 40 caracteres y que `git diff --check` no reportara errores. Posteriormente, el pipeline CI/CD se ejecutó correctamente en GitHub Actions, con el check del pull request en verde.
+
+ Archivo dependabot.yml
+ 
+ version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+
+
+  **Ejecución de Actions:** https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37880846869
+
+
+
+* **Qué no me funcionó:** Inicialmente, las acciones estaban referenciadas mediante etiquetas de versión, por lo que no cumplían el requisito de fijación a SHA completos. Se utilizó una herramienta para automatizar la sustitución de las referencias y se revisó el formato de los cambios. La validación de formato no garantiza por sí sola que cada SHA corresponda a una versión oficial confiable; por ello, también es importante revisar las referencias y comprobar que el pipeline continúe funcionando.
