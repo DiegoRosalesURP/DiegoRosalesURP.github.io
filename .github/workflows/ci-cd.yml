@@ -229,6 +229,7 @@ jobs:
         with:
           scan-type: image
           image-ref: ghcr.io/diegorosalesurp/perfil-${{ matrix.image }}:${{ env.IMAGE_TAG }}
+          trivyignores: .trivyignore
           format: sarif
           output: trivy-${{ matrix.image }}.sarif
           severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
@@ -246,6 +247,7 @@ jobs:
         with:
           scan-type: image
           image-ref: ghcr.io/diegorosalesurp/perfil-${{ matrix.image }}:${{ env.IMAGE_TAG }}
+          trivyignores: .trivyignore
           format: table
           severity: CRITICAL
           ignore-unfixed: true
@@ -318,9 +320,11 @@ jobs:
 
       - name: Configurar variables de prueba
         run: |
-          echo "POSTGRES_DB=perfil" >> "$GITHUB_ENV"
-          echo "POSTGRES_USER=perfil" >> "$GITHUB_ENV"
-          echo "POSTGRES_PASSWORD=perfil" >> "$GITHUB_ENV"
+          {
+            echo "POSTGRES_DB=perfil"
+            echo "POSTGRES_USER=perfil"
+            echo "POSTGRES_PASSWORD=perfil"
+          } >> "$GITHUB_ENV"
 
       - name: Crear configuración Compose para smoke
         run: |

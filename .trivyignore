@@ -1,0 +1,5 @@
+﻿# CVE-2026-1703: vulnerabilidad de severidad baja en pip.
+# Se acepta porque el impacto descrito es limitado y la explotacion requiere
+# procesar un archivo wheel malicioso. pip se utiliza principalmente durante
+# la construccion de la imagen y no durante la ejecucion normal de la API.
+CVE-2026-1703
