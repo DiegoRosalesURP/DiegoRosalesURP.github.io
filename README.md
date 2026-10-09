@@ -357,3 +357,46 @@ No aplicaría Continuous Deployment en sistemas donde un cambio en producción r
   La reducción obtenida fue de **54 segundos**, equivalente aproximadamente a **28,3 %** respecto de la ejecución original. El resultado quedó muy próximo al objetivo del 30 %.
 
 * **Qué no me funcionó:** Inicialmente se utilizó `cache-to` con `mode=max`, pero la ejecución todavía tenía un tiempo elevado. Al revisar los logs de Buildx se observó que la exportación de la caché podía consumir varios segundos. Además, en el primer intento de utilizar la caché `gha` apareció un error porque el driver Docker predeterminado no permitía exportar la caché; se solucionó configurando `docker/setup-buildx-action` con el driver `docker-container`. Posteriormente se cambió a `mode=min`, logrando una mejora considerable, especialmente en la construcción de la API. Se realizaron varias ejecuciones para comprobar la variabilidad de GitHub Actions y el resultado final se mantuvo alrededor de 2 min 17 s. No se realizaron modificaciones adicionales al Smoke Test porque su función es verificar que las imágenes publicadas y los servicios funcionen correctamente.
+
+### Reto 2: Integrar análisis SAST y reportes de seguridad
+
+* **Decisión:** Integré Semgrep para analizar la seguridad del código fuente y Trivy para detectar vulnerabilidades en las imágenes Docker de la web y la API. También configuré la publicación de los resultados en GitHub Code Scanning y documenté una vulnerabilidad aceptada mediante `.trivyignore`.
+
+* **Alternativas que evalué:**
+
+  * **Usar únicamente Trivy:** permite detectar vulnerabilidades en las imágenes y sus dependencias, pero no reemplaza el análisis estático del código fuente.
+  * **Usar únicamente Semgrep:** permite identificar posibles problemas de seguridad en el código, pero no cubre por sí solo las vulnerabilidades de los paquetes del sistema operativo y las dependencias de las imágenes Docker.
+  * **Integrar ambas herramientas:** requiere configurar y mantener dos análisis, pero permite revisar tanto el código fuente como las imágenes generadas.
+
+* **Por qué elegí esta:** Elegí combinar Semgrep y Trivy porque sus análisis se complementan y permiten obtener una visión más amplia de la seguridad del proyecto. Además, decidí publicar los resultados en GitHub Code Scanning para facilitar su consulta y seguimiento. Para la vulnerabilidad aceptada, utilicé `.trivyignore` con una justificación explícita, en lugar de ignorar indiscriminadamente otros hallazgos.
+
+* **Fuentes consultadas:**
+
+  * [Documentación oficial de Semgrep](https://semgrep.dev/docs/)
+  * [Documentación oficial de Trivy](https://trivy.dev/latest/docs/)
+  * [GitHub: subir archivos SARIF para análisis de código](https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning)
+  * [Trivy: configuración de excepciones de vulnerabilidades](https://trivy.dev/latest/docs/configuration/filtering/)
+
+* **Cómo lo verifiqué:** Validé el workflow con `actionlint` y comprobé que el pipeline de GitHub Actions finalizara correctamente. También revisé GitHub Code Scanning para verificar la publicación de los resultados de Semgrep y Trivy, y confirmé que la vulnerabilidad documentada en `.trivyignore` dejara de aparecer en los reportes. Enlace al run de Actions: **https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37873619746**.
+
+* **Qué no me funcionó:** Inicialmente, `actionlint` reportó la advertencia `SC2129` debido a las redirecciones individuales al archivo `$GITHUB_ENV`. Aprendí que podía agrupar los comandos de escritura para compartir una sola redirección. También comprobé que documentar una excepción en `.trivyignore` no significa que deban ignorarse todas las vulnerabilidades de la misma dependencia, ya que cada alerta debe evaluarse por separado.
+
+### Reto 3: Incorporar pruebas de integración con Docker Compose
+
+* **Decisión:** Incorporé un script de pruebas con `curl` para verificar los endpoints de la API a través del servicio web, incluyendo los códigos HTTP, la validación de datos y la persistencia de los mensajes en PostgreSQL.
+
+* **Alternativas evaluadas:** Podía utilizar Vitest o pruebas unitarias de Flask, pero estas últimas no validan por sí solas la interacción entre los contenedores. Por ello, mantuve las pruebas unitarias y añadí pruebas de integración sobre el entorno levantado con Docker Compose.
+
+* **Por qué elegí esta solución:** Permite comprobar que la web, la API y la base de datos funcionan conjuntamente antes de integrar los cambios en `main`.
+
+* **Qué no me funcionó y cómo lo solucioné:** Inicialmente, el entorno de integración devolvió un error HTTP 500 al intentar registrar un mensaje, porque la tabla `mensajes` no se había creado en la base de datos de prueba. Lo solucioné montando los scripts SQL de inicialización en el contenedor de PostgreSQL. Después, las cinco pruebas de integración finalizaron correctamente. También realicé una prueba de fallo intencional modificando temporalmente el endpoint `/api/health`; el pipeline detectó la respuesta HTTP 500 durante las pruebas unitarias y detuvo la ejecución antes de llegar al job de integración. Esto permitió comprobar que los tests detectan respuestas inesperadas, aunque no constituye una ejecución roja específica del job de integración.
+
+* **Cómo lo verifiqué:** Comprobé que las cinco pruebas de integración pasaran y que el mensaje creado apareciera en la consulta posterior. Guardé los enlaces de las ejecuciones de GitHub Actions como evidencia:
+
+  * Ejecución de integración exitosa: **https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37878166622**
+  * Ejecución con fallo intencional: **https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37877758277**
+
+* **Fuentes consultadas:**
+
+  * [Documentación de Docker Compose](https://docs.docker.com/compose/)
+  * [Documentación de la imagen oficial de PostgreSQL](https://hub.docker.com/_/postgres)
