@@ -438,3 +438,34 @@ updates:
 
 
 * **Qué no me funcionó:** Inicialmente, las acciones estaban referenciadas mediante etiquetas de versión, por lo que no cumplían el requisito de fijación a SHA completos. Se utilizó una herramienta para automatizar la sustitución de las referencias y se revisó el formato de los cambios. La validación de formato no garantiza por sí sola que cada SHA corresponda a una versión oficial confiable; por ello, también es importante revisar las referencias y comprobar que el pipeline continúe funcionando.
+
+
+### Reto 5: Verificar producción y probar el rollback
+
+- **Decisión:** Agregué una verificación después del despliegue para comprobar que GitHub Pages responda con HTTP 200, muestre mi nombre y publique el archivo JavaScript del libro de visitas. También agregué una prueba automatizada para validar que el portafolio siga funcionando cuando la API no está disponible.
+
+- **Alternativas que evalué:**
+  - **Revisar manualmente la página:** permite comprobar visualmente el resultado, pero no garantiza que las mismas verificaciones se ejecuten en cada despliegue.
+  - **Validar el sitio desde el pipeline:** automatiza las comprobaciones y permite detectar errores después de publicar, aunque requiere configurar las verificaciones y manejar los tiempos de propagación de GitHub Pages.
+  - **Revertir directamente el historial:** puede parecer más rápido, pero altera la historia del repositorio y dificulta el seguimiento de los cambios.
+
+- **Por qué elegí esta:** Elegí automatizar la revisión de producción para detectar problemas después del despliegue. Para el rollback, usaré `git revert`, porque permite revertir un cambio mediante un nuevo commit y volver a pasar por el pipeline CI/CD.
+
+- **Fuentes consultadas:**
+  - [GitHub Actions: eventos que activan workflows](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows)
+  - [GitHub Pages: configurar una fuente de publicación](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+  - [Git: git revert](https://git-scm.com/docs/git-revert)
+  - [GitHub Actions: almacenar información de los pasos](https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions)
+
+- **Cómo lo verifiqué:**
+  - Pruebas automatizadas: 14 pruebas aprobadas.
+  - Revisión de producción en Actions: Pendiente.
+  - Ejecución del rollback en Actions: Pendiente.
+
+- **Qué no me funcionó:** Al principio escribí incorrectamente el comando para cambiar el mensaje del commit. Aprendí que `git commit --amend -m` permite corregir el mensaje del último commit sin crear otro. También comprobé que debía ejecutar las pruebas con la carpeta `_site` generada, porque las pruebas leen los archivos publicados desde esa ubicación.
+
+**Evidencias:**
+- Archivo `.github/workflows/ci-cd.yml`, con la verificación del sitio publicado.
+- Archivo `.github/dependabot.yml`, con la configuración de actualizaciones de dependencias.
+- Log de la revisión de producción en GitHub Actions.
+- Run de GitHub Actions correspondiente al rollback.
