@@ -321,15 +321,15 @@ sha256:bb096d35fd640c4c3a19249b857fdf64745e1f16a3794e4ce44201d90d4414d3
 
 * **Qué no me funcionó:** En el primer intento, `.env.example` contenía accidentalmente caracteres de un comando de PowerShell (`@"` y `"@ | Set-Content`). Esto impedía que un Codespace nuevo generara correctamente `.env`. Se corrigió mediante una rama independiente y un Pull Request. Después de la corrección, un Codespace nuevo inició los servicios correctamente y el guestbook funcionó.
 
-## Delivery o deployment
+## Bitácora de decisiones - LAB 3
+
+## Delivery o deployment (B3)
 
 En este proyecto, el pipeline implementa **Continuous Delivery**, porque cada cambio que llega a `main` pasa por las etapas de Build, Test, Package, Security y Smoke, quedando listo para ser publicado en producción. Sin embargo, el despliegue a GitHub Pages requiere una aprobación manual mediante el environment `github-pages`.
 
 Para pasar a **Continuous Deployment**, eliminaría la aprobación manual del environment `github-pages`, de modo que todo cambio que llegue a `main` y supere correctamente todas las validaciones sea desplegado automáticamente en producción.
 
 No aplicaría Continuous Deployment en sistemas donde un cambio en producción requiera revisión humana, por ejemplo, cuando existen requisitos regulatorios, cambios críticos de seguridad, migraciones de datos o funcionalidades con alto impacto para los usuarios. En esos casos, mantendría Continuous Delivery para conservar una etapa de aprobación antes del despliegue.
-
-## Bitácora de decisiones - LAB 3
 
 ### Reto 1: Reducir el tiempo de ejecución del pipeline
 
@@ -349,9 +349,11 @@ No aplicaría Continuous Deployment en sistemas donde un cambio en producción r
 * **Cómo lo verifiqué:** Se comparó una ejecución exitosa anterior a las optimizaciones con una ejecución posterior utilizando la configuración optimizada.
 
   **Ejecución original:** [Actions run 37737121464](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37737121464)
+
   Duración total: **3 min 11 s (191 s)**. Build y lint: 23 s, Test: 22 s, Package: 41 s, Security: 17 s y Smoke: 43 s.
 
   **Ejecución optimizada:** [Actions run 37849617438](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37849617438)
+
   Duración total: **2 min 17 s (137 s)**. Build y lint: 19 s, Test: 18 s, Package y Security ejecutados mediante matrices en paralelo, y Smoke: 37 s.
 
   La reducción obtenida fue de **54 segundos**, equivalente aproximadamente a **28,3 %** respecto de la ejecución original. El resultado quedó muy próximo al objetivo del 30 %.
@@ -377,7 +379,7 @@ No aplicaría Continuous Deployment en sistemas donde un cambio en producción r
   * [GitHub: subir archivos SARIF para análisis de código](https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning)
   * [Trivy: configuración de excepciones de vulnerabilidades](https://trivy.dev/latest/docs/configuration/filtering/)
 
-* **Cómo lo verifiqué:** Validé el workflow con `actionlint` y comprobé que el pipeline de GitHub Actions finalizara correctamente. También revisé GitHub Code Scanning para verificar la publicación de los resultados de Semgrep y Trivy, y confirmé que la vulnerabilidad documentada en `.trivyignore` dejara de aparecer en los reportes. Enlace al run de Actions: **https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37873619746**.
+* **Cómo lo verifiqué:** Validé el workflow con `actionlint` y comprobé que el pipeline de GitHub Actions finalizara correctamente. También revisé GitHub Code Scanning para verificar la publicación de los resultados de Semgrep y Trivy, y confirmé que la vulnerabilidad documentada en `.trivyignore` dejara de aparecer en los reportes. Enlace al run de Actions: [37873619746](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37873619746).
 
 * **Qué no me funcionó:** Inicialmente, `actionlint` reportó la advertencia `SC2129` debido a las redirecciones individuales al archivo `$GITHUB_ENV`. Aprendí que podía agrupar los comandos de escritura para compartir una sola redirección. También comprobé que documentar una excepción en `.trivyignore` no significa que deban ignorarse todas las vulnerabilidades de la misma dependencia, ya que cada alerta debe evaluarse por separado.
 
@@ -393,15 +395,15 @@ No aplicaría Continuous Deployment en sistemas donde un cambio en producción r
 
 * **Cómo lo verifiqué:** Comprobé que las cinco pruebas de integración pasaran y que el mensaje creado apareciera en la consulta posterior. Guardé los enlaces de las ejecuciones de GitHub Actions como evidencia:
 
-  * Ejecución de integración exitosa: **https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37878166622**
-  * Ejecución con fallo intencional: **https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37877758277**
+  * Ejecución de integración exitosa: [37878166622](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37878166622)
+  * Ejecución con fallo intencional: [37877758277](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37877758277)
 
 * **Fuentes consultadas:**
 
   * [Documentación de Docker Compose](https://docs.docker.com/compose/)
   * [Documentación de la imagen oficial de PostgreSQL](https://hub.docker.com/_/postgres)
 
-  ### Reto 4: Mínimo privilegio y cadena de suministro
+### Reto 4: Mínimo privilegio y cadena de suministro
 
 * **Decisión:** Se definieron permisos específicos para cada job del pipeline CI/CD, se fijaron las acciones de GitHub a SHA completos y se configuró Dependabot para revisar semanalmente las actualizaciones de GitHub Actions. Con ello se busca reducir los riesgos de seguridad asociados a las dependencias y al uso de permisos excesivos.
 
@@ -422,52 +424,78 @@ No aplicaría Continuous Deployment en sistemas donde un cambio en producción r
 
 * **Cómo lo verifiqué:** Se comprobó que las 25 referencias `uses:` del workflow utilizaran SHA de 40 caracteres y que `git diff --check` no reportara errores. Posteriormente, el pipeline CI/CD se ejecutó correctamente en GitHub Actions, con el check del pull request en verde.
 
- Archivo dependabot.yml
- 
- version: 2
-updates:
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 10
+  Archivo `dependabot.yml`:
 
+  ```yaml
+  version: 2
 
-  **Ejecución de Actions:** https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37880846869
+  updates:
+    - package-ecosystem: github-actions
+      directory: /
+      schedule:
+        interval: weekly
+      open-pull-requests-limit: 10
+  ```
 
-
+  **Ejecución de Actions:** [37880846869](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37880846869)
 
 * **Qué no me funcionó:** Inicialmente, las acciones estaban referenciadas mediante etiquetas de versión, por lo que no cumplían el requisito de fijación a SHA completos. Se utilizó una herramienta para automatizar la sustitución de las referencias y se revisó el formato de los cambios. La validación de formato no garantiza por sí sola que cada SHA corresponda a una versión oficial confiable; por ello, también es importante revisar las referencias y comprobar que el pipeline continúe funcionando.
 
-
 ### Reto 5: Verificar producción y probar el rollback
-Explicación de como volver a una versión anterior si algo sale mal
 
 * **Procedimiento de rollback (recuperación de una versión anterior):** Si un despliegue presenta errores, puedo utilizar `git revert` para revertir el commit que introdujo el problema. Este comando crea un nuevo commit que deshace los cambios seleccionados sin eliminar el historial del repositorio. Después, integro el cambio mediante un Pull Request y verifico que el pipeline CI/CD se ejecute correctamente para comprobar el estado del proyecto.
 
 * **Cómo probé el rollback:** Realicé la prueba revirtiendo el commit `2ddbd5a`, que contenía las mejoras de verificación de producción. El cambio se integró mediante el Pull Request #40 y se ejecutó GitHub Actions. Después restauré las mejoras para mantener activas las verificaciones de producción. Con esto comprobé el procedimiento de reversión y recuperación de los cambios.
 
+* **Decisión:** Agregué una verificación después del despliegue para comprobar que GitHub Pages responda con HTTP 200, muestre mi nombre y publique el archivo JavaScript del libro de visitas. También agregué una prueba automatizada para validar que el portafolio siga funcionando cuando la API no está disponible.
 
-- **Decisión:** Agregué una verificación después del despliegue para comprobar que GitHub Pages responda con HTTP 200, muestre mi nombre y publique el archivo JavaScript del libro de visitas. También agregué una prueba automatizada para validar que el portafolio siga funcionando cuando la API no está disponible.
+* **Alternativas que evalué:**
 
-- **Alternativas que evalué:**
-  - **Revisar manualmente la página:** permite comprobar visualmente el resultado, pero no garantiza que las mismas verificaciones se ejecuten en cada despliegue.
-  - **Validar el sitio desde el pipeline:** automatiza las comprobaciones y permite detectar errores después de publicar, aunque requiere configurar las verificaciones y manejar los tiempos de propagación de GitHub Pages.
-  - **Revertir directamente el historial:** puede parecer más rápido, pero altera la historia del repositorio y dificulta el seguimiento de los cambios.
+  * **Revisar manualmente la página:** permite comprobar visualmente el resultado, pero no garantiza que las mismas verificaciones se ejecuten en cada despliegue.
+  * **Validar el sitio desde el pipeline:** automatiza las comprobaciones y permite detectar errores después de publicar, aunque requiere configurar las verificaciones y manejar los tiempos de propagación de GitHub Pages.
+  * **Revertir directamente el historial:** puede parecer más rápido, pero altera la historia del repositorio y dificulta el seguimiento de los cambios.
 
-- **Por qué elegí esta:** Elegí automatizar la revisión de producción para detectar problemas después del despliegue. Para el rollback, usaré `git revert`, porque permite revertir un cambio mediante un nuevo commit y volver a pasar por el pipeline CI/CD.
+* **Por qué elegí esta:** Elegí automatizar la revisión de producción para detectar problemas después del despliegue. Para el rollback, usaré `git revert`, porque permite revertir un cambio mediante un nuevo commit y volver a pasar por el pipeline CI/CD.
 
-- **Fuentes consultadas:**
-  - [GitHub Actions: eventos que activan workflows](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows)
-  - [GitHub Pages: configurar una fuente de publicación](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
-  - [Git: git revert](https://git-scm.com/docs/git-revert)
-  - [GitHub Actions: almacenar información de los pasos](https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions)
+* **Fuentes consultadas:**
 
-- **Cómo lo verifiqué:**
-  - Pruebas automatizadas: 14 pruebas aprobadas.
-  - Revisión de producción en Actions: https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37885170773/job/113674059038
-  - Ejecución del rollback en Actions: https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37886439781
+  * [GitHub Actions: eventos que activan workflows](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows)
+  * [GitHub Pages: configurar una fuente de publicación](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+  * [Git: git revert](https://git-scm.com/docs/git-revert)
+  * [GitHub Actions: almacenar información de los pasos](https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions)
 
-- **Qué no me funcionó:** Al ejecutar las pruebas automatizadas, comprobé que era necesario generar primero la carpeta _site, ya que las pruebas utilizan los archivos publicados desde esa ubicación. También tuve que considerar que GitHub Pages puede tardar unos segundos en reflejar los cambios después del despliegue. Por ello, configuré la verificación para realizar varios intentos antes de marcar la publicación como fallida. Así pude comprobar que el sitio respondiera con HTTP 200, mostrara mi nombre y cargara correctamente el JavaScript del libro de visitas.
+* **Cómo lo verifiqué:**
 
-[![CI/CD](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/workflows/ci-cd.yml)
+  * Pruebas automatizadas: 14 pruebas aprobadas.
+  * Revisión de producción en Actions: [ejecución de producción](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37885170773/job/113674059038)
+  * Ejecución del rollback en Actions: [ejecución del rollback](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37886439781)
+
+* **Qué no me funcionó:** Al ejecutar las pruebas automatizadas, comprobé que era necesario generar primero la carpeta `_site`, ya que las pruebas utilizan los archivos publicados desde esa ubicación. También tuve que considerar que GitHub Pages puede tardar unos segundos en reflejar los cambios después del despliegue. Por ello, configuré la verificación para realizar varios intentos antes de marcar la publicación como fallida. Así pude comprobar que el sitio respondiera con HTTP 200, mostrara mi nombre y cargara correctamente el JavaScript del libro de visitas.
+
+### Reto 6: El pipeline se explica solo
+
+* **Decisión:** Se incorporó un resumen automático mediante `$GITHUB_STEP_SUMMARY` para mostrar los resultados de las pruebas del sitio y de la API, así como los conteos de vulnerabilidades por severidad para las imágenes `web` y `api`. También se agregó el badge del workflow CI/CD al README.
+
+* **Alternativas que evalué:**
+
+  * **Consultar únicamente los logs de cada job:** permite revisar los detalles, pero requiere entrar en diferentes pasos para conocer los resultados.
+  * **Generar un resumen con `$GITHUB_STEP_SUMMARY`:** concentra los resultados en la interfaz de GitHub Actions, aunque requiere configurar los pasos para generar el contenido.
+  * **Mostrar únicamente el badge del workflow:** permite identificar el estado general de la ejecución, pero no muestra los resultados detallados de las pruebas ni las vulnerabilidades.
+
+* **Por qué elegí esta:** Elegí combinar el resumen de pruebas, las tablas de vulnerabilidades y el badge porque facilita la revisión del pipeline y permite conocer los resultados sin consultar cada log individualmente.
+
+* **Fuentes consultadas:**
+
+  * [GitHub Actions: añadir un resumen a un job](https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary)
+  * [Trivy: documentación oficial](https://trivy.dev/latest/docs/)
+  * [GitHub Actions: insignias de estado del workflow](https://docs.github.com/en/actions/how-tos/monitor-workflows/add-a-status-badge)
+
+* **Cómo lo verifiqué:** Ejecuté el workflow y comprobé que el resumen mostrara los resultados de SITIO y API, con 14 de 14 pruebas de Vitest aprobadas. También verifiqué las tablas de vulnerabilidades de ambas imágenes y que el badge del README enlazara al workflow.
+
+  [Ejecución de Actions del Reto 6](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37891395330)
+
+  Badge del README enlazado al workflow:
+
+  [![CI/CD](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/workflows/ci-cd.yml)
+
+* **Qué no me funcionó:** La validación inicial del workflow requirió comprobaciones adicionales antes de confirmar el resultado. Se ejecutó Actionlint sin errores y `git diff --check` tampoco reportó problemas. Posteriormente, se verificó que los resúmenes se publicaran correctamente en GitHub Actions. No se identificó un fallo específico de generación del resumen durante la ejecución final.
