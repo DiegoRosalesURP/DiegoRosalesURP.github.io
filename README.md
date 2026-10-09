@@ -441,6 +441,12 @@ updates:
 
 
 ### Reto 5: Verificar producción y probar el rollback
+Explicación de como volver a una versión anterior si algo sale mal
+
+* **Procedimiento de rollback (recuperación de una versión anterior):** Si un despliegue presenta errores, puedo utilizar `git revert` para revertir el commit que introdujo el problema. Este comando crea un nuevo commit que deshace los cambios seleccionados sin eliminar el historial del repositorio. Después, integro el cambio mediante un Pull Request y verifico que el pipeline CI/CD se ejecute correctamente para comprobar el estado del proyecto.
+
+* **Cómo probé el rollback:** Realicé la prueba revirtiendo el commit `2ddbd5a`, que contenía las mejoras de verificación de producción. El cambio se integró mediante el Pull Request #40 y se ejecutó GitHub Actions. Después restauré las mejoras para mantener activas las verificaciones de producción. Con esto comprobé el procedimiento de reversión y recuperación de los cambios.
+
 
 - **Decisión:** Agregué una verificación después del despliegue para comprobar que GitHub Pages responda con HTTP 200, muestre mi nombre y publique el archivo JavaScript del libro de visitas. También agregué una prueba automatizada para validar que el portafolio siga funcionando cuando la API no está disponible.
 
@@ -459,13 +465,7 @@ updates:
 
 - **Cómo lo verifiqué:**
   - Pruebas automatizadas: 14 pruebas aprobadas.
-  - Revisión de producción en Actions: Pendiente.
-  - Ejecución del rollback en Actions: Pendiente.
+  - Revisión de producción en Actions: https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37885170773/job/113674059038
+  - Ejecución del rollback en Actions: https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37886439781
 
-- **Qué no me funcionó:** Al principio escribí incorrectamente el comando para cambiar el mensaje del commit. Aprendí que `git commit --amend -m` permite corregir el mensaje del último commit sin crear otro. También comprobé que debía ejecutar las pruebas con la carpeta `_site` generada, porque las pruebas leen los archivos publicados desde esa ubicación.
-
-**Evidencias:**
-- Archivo `.github/workflows/ci-cd.yml`, con la verificación del sitio publicado.
-- Archivo `.github/dependabot.yml`, con la configuración de actualizaciones de dependencias.
-- Log de la revisión de producción en GitHub Actions.
-- Run de GitHub Actions correspondiente al rollback.
+- **Qué no me funcionó:** Al ejecutar las pruebas automatizadas, comprobé que era necesario generar primero la carpeta _site, ya que las pruebas utilizan los archivos publicados desde esa ubicación. También tuve que considerar que GitHub Pages puede tardar unos segundos en reflejar los cambios después del despliegue. Por ello, configuré la verificación para realizar varios intentos antes de marcar la publicación como fallida. Así pude comprobar que el sitio respondiera con HTTP 200, mostrara mi nombre y cargara correctamente el JavaScript del libro de visitas.
