@@ -469,3 +469,5 @@ Explicación de como volver a una versión anterior si algo sale mal
   - Ejecución del rollback en Actions: https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/runs/37886439781
 
 - **Qué no me funcionó:** Al ejecutar las pruebas automatizadas, comprobé que era necesario generar primero la carpeta _site, ya que las pruebas utilizan los archivos publicados desde esa ubicación. También tuve que considerar que GitHub Pages puede tardar unos segundos en reflejar los cambios después del despliegue. Por ello, configuré la verificación para realizar varios intentos antes de marcar la publicación como fallida. Así pude comprobar que el sitio respondiera con HTTP 200, mostrara mi nombre y cargara correctamente el JavaScript del libro de visitas.
+
+[![CI/CD](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io/actions/workflows/ci-cd.yml)
