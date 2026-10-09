@@ -1,3 +1,4 @@
+
 name: CI/CD
 
 on:
@@ -76,7 +77,6 @@ jobs:
         run: |
           rm -rf _site
           mkdir -p _site
-
           cp index.html _site/
           cp estilos.css _site/
           cp libro-de-visitas.js _site/
@@ -86,8 +86,6 @@ jobs:
           test -f _site/index.html
           test -f _site/estilos.css
           test -f _site/libro-de-visitas.js
-
-          echo "Contenido de _site:"
           find _site -maxdepth 1 -type f -print
 
       - name: Subir artifact de GitHub Pages
@@ -203,14 +201,19 @@ jobs:
     permissions:
       contents: read
       packages: read
+      security-events: write
 
     strategy:
+      fail-fast: false
       matrix:
         image:
           - web
           - api
 
     steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
       - name: Generar tag de la imagen
         run: echo "IMAGE_TAG=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
@@ -221,19 +224,74 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Escanear imagen con Trivy
+      - name: Generar informe SARIF de Trivy
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: image
-          image-ref: "ghcr.io/diegorosalesurp/perfil-${{ matrix.image }}:${{ env.IMAGE_TAG }}"
+          image-ref: ghcr.io/diegorosalesurp/perfil-${{ matrix.image }}:${{ env.IMAGE_TAG }}
+          trivyignores: .trivyignore
+          format: sarif
+          output: trivy-${{ matrix.image }}.sarif
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          exit-code: "0"
+
+      - name: Publicar resultados de Trivy en Code Scanning
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles(format('trivy-{0}.sarif', matrix.image)) != ''
+        with:
+          sarif_file: trivy-${{ matrix.image }}.sarif
+          category: trivy-${{ matrix.image }}
+
+      - name: Bloquear vulnerabilidades críticas corregibles
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          scan-type: image
+          image-ref: ghcr.io/diegorosalesurp/perfil-${{ matrix.image }}:${{ env.IMAGE_TAG }}
+          trivyignores: .trivyignore
+          format: table
           severity: CRITICAL
           ignore-unfixed: true
           exit-code: "1"
-          format: table
+
+  sast:
+    name: SAST - Semgrep
+    needs: package
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar Semgrep
+        run: pip install semgrep
+
+      - name: Analizar API y JavaScript
+        run: |
+          semgrep scan \
+            --config auto \
+            --sarif \
+            --output semgrep.sarif \
+            api libro-de-visitas.js
+
+      - name: Publicar resultados de Semgrep en Code Scanning
+        if: always() && hashFiles('semgrep.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep-python-javascript
 
   smoke:
     name: Smoke
-    needs: security
+    needs: [security, sast]
     runs-on: ubuntu-latest
 
     permissions:
@@ -262,9 +320,11 @@ jobs:
 
       - name: Configurar variables de prueba
         run: |
-          echo "POSTGRES_DB=perfil" >> "$GITHUB_ENV"
-          echo "POSTGRES_USER=perfil" >> "$GITHUB_ENV"
-          echo "POSTGRES_PASSWORD=perfil" >> "$GITHUB_ENV"
+          {
+            echo "POSTGRES_DB=perfil"
+            echo "POSTGRES_USER=perfil"
+            echo "POSTGRES_PASSWORD=perfil"
+          } >> "$GITHUB_ENV"
 
       - name: Crear configuración Compose para smoke
         run: |
@@ -273,11 +333,9 @@ jobs:
             web:
               image: ghcr.io/diegorosalesurp/perfil-web:${IMAGE_TAG}
               build: null
-
             api:
               image: ghcr.io/diegorosalesurp/perfil-api:${IMAGE_TAG}
               build: null
-
             db:
               image: postgres:16-alpine
               build: null
@@ -289,7 +347,6 @@ jobs:
       - name: Ejecutar smoke test
         run: |
           status=$(curl --silent --output response.html --write-out "%{http_code}" http://localhost:8080/)
-
           echo "Código HTTP: $status"
 
           if [ "$status" != "200" ]; then
@@ -298,7 +355,6 @@ jobs:
           fi
 
           grep -Fq "Diego Alejandro Rosales Enciso" response.html
-
           echo "Smoke test exitoso: HTTP 200 y nombre encontrado."
 
       - name: Mostrar logs si falla el smoke
