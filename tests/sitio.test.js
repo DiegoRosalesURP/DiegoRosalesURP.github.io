@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, vi } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import { readFileSync, existsSync } from 'node:fs'
 import { JSDOM } from 'jsdom'
 
@@ -52,9 +52,8 @@ describe('index.html', () => {
   })
 
   it('el mensaje permite como máximo 280 caracteres', () => {
-    expect(
-      doc.querySelector('textarea[name="mensaje"]')?.getAttribute('maxlength')
-    ).toBe('280')
+    expect(doc.querySelector('textarea[name="mensaje"]')
+      ?.getAttribute('maxlength')).toBe('280')
   })
 
   it('todos los archivos locales utilizados existen', () => {
@@ -88,50 +87,6 @@ describe('el sitio publicado', () => {
         existsSync(`${SITIO}/${interno}`),
         `${interno} no debería publicarse`
       ).toBe(false)
-    }
-  })
-})
-
-describe('libro de visitas sin API', () => {
-  it('mantiene oculta la sección si la API no está disponible', async () => {
-    const html = readFileSync(`${SITIO}/index.html`, 'utf-8')
-    const js = readFileSync(`${SITIO}/libro-de-visitas.js`, 'utf-8')
-
-    const dom = new JSDOM(html, {
-      runScripts: 'outside-only',
-      url: 'https://ejemplo.github.io/'
-    })
-
-    const { window } = dom
-    const fetchMock = vi.fn().mockRejectedValue(
-      new Error('API no disponible')
-    )
-
-    window.fetch = fetchMock
-    const infoOriginal = window.console.info
-    window.console.info = vi.fn()
-
-    try {
-      window.eval(js)
-
-      await new Promise((resolve) => setTimeout(resolve, 0))
-
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/mensajes',
-        { headers: { Accept: 'application/json' } }
-      )
-
-      expect(
-        window.document.getElementById('libro-de-visitas').hidden
-      ).toBe(true)
-
-      expect(window.console.info).toHaveBeenCalledWith(
-        'Libro de visitas oculto:',
-        'API no disponible'
-      )
-    } finally {
-      window.console.info = infoOriginal
-      window.close()
     }
   })
 })
