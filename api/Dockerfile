@@ -1,8 +1,8 @@
 FROM alpine:3.22 AS builder
 
 RUN apk add --no-cache \
-    python3 \
-    py3-pip
+    python3=3.12.16-r0 \
+    py3-pip=25.1.1-r0
 
 WORKDIR /build
 
@@ -18,7 +18,7 @@ FROM alpine:3.22
 
 LABEL org.opencontainers.image.source="https://github.com/DiegoRosalesURP/DiegoRosalesURP.github.io"
 
-RUN apk add --no-cache python3
+RUN apk add --no-cache python3=3.12.16-r0
 
 WORKDIR /app
 
