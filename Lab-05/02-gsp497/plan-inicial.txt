@@ -1,0 +1,12 @@
+google_project_service.container: Refreshing state... [id=qwiklabs-gcp-03-8f87d15eea4c/container.googleapis.com]
+data.google_container_engine_versions.gke_versions: Reading...
+google_project_service.logging: Refreshing state... [id=qwiklabs-gcp-03-8f87d15eea4c/logging.googleapis.com]
+google_project_service.monitoring: Refreshing state... [id=qwiklabs-gcp-03-8f87d15eea4c/monitoring.googleapis.com]
+data.google_container_engine_versions.gke_versions: Read complete after 1s [id=2026-11-04 03:56:34.646026609 +0000 UTC]
+google_container_cluster.primary: Refreshing state... [id=projects/qwiklabs-gcp-03-8f87d15eea4c/locations/us-east1-c/clusters/stackdriver-monitoring-tutorial]
+google_monitoring_alert_policy.prometheus_mem_alloc: Refreshing state... [id=projects/qwiklabs-gcp-03-8f87d15eea4c/alertPolicies/15600118953127704317]
+
+No changes. Your infrastructure matches the configuration.
+
+Terraform has compared your real infrastructure against your configuration
+and found no differences, so no changes are needed.
