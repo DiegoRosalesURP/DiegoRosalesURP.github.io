@@ -1,0 +1,64 @@
+data.google_container_engine_versions.default: Reading...
+data.google_client_config.current: Reading...
+google_compute_address.default: Refreshing state... [id=projects/qwiklabs-gcp-04-66e393312bd5/regions/us-west1/addresses/tf-gke-k8s]
+google_compute_network.default: Refreshing state... [id=projects/qwiklabs-gcp-04-66e393312bd5/global/networks/tf-gke-k8s]
+data.google_client_config.current: Read complete after 0s [id=projects/qwiklabs-gcp-04-66e393312bd5/regions/us-west1/zones/]
+google_compute_subnetwork.default: Refreshing state... [id=projects/qwiklabs-gcp-04-66e393312bd5/regions/us-west1/subnetworks/tf-gke-k8s]
+data.google_container_engine_versions.default: Read complete after 1s [id=2026-11-04 01:56:01.072749856 +0000 UTC]
+google_container_cluster.default: Refreshing state... [id=projects/qwiklabs-gcp-04-66e393312bd5/locations/us-west1-b/clusters/tf-gke-k8s]
+kubernetes_namespace.staging: Refreshing state... [id=staging]
+kubernetes_service.nginx: Refreshing state... [id=staging/nginx]
+kubernetes_replication_controller.nginx: Refreshing state... [id=staging/nginx]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  ~ update in-place
+
+Terraform will perform the following actions:
+
+  # kubernetes_service.nginx will be updated in-place
+  ~ resource "kubernetes_service" "nginx" {
+        id                    = "staging/nginx"
+        # (1 unchanged attribute hidden)
+
+      ~ metadata {
+          ~ annotations      = {
+              - "cloud.google.com/l4-rbs"         = "enabled" -> null
+              - "cloud.google.com/neg"            = jsonencode(
+                    {
+                      - ingress = true
+                    }
+                ) -> null
+              - "cloud.google.com/neg-status"     = jsonencode(
+                    {
+                      - network_endpoint_groups = {
+                          - "0" = "k8s2-868i45e0-staging-nginx-wcrgmk40"
+                        }
+                      - zones                   = [
+                          - "us-west1-b",
+                        ]
+                    }
+                ) -> null
+              - "networking.gke.io/rbs-defaulted" = "true" -> null
+            }
+            name             = "nginx"
+            # (7 unchanged attributes hidden)
+        }
+
+        # (1 unchanged block hidden)
+    }
+
+Plan: 0 to add, 1 to change, 0 to destroy.
+
+Warning: Version constraints inside provider configuration blocks are deprecated
+
+  on k8s.tf line 2, in provider "kubernetes":
+   2:   version = "~> 1.10.0"
+
+Terraform 0.13 and earlier allowed provider version constraints inside the provider configuration block, but that is now deprecated and will be removed in a future version of
+Terraform. To silence this warning, move the provider version constraint into the required_providers block.
+
+─────────────────────────────────────────────────────────────────────────────
+
+Note: You didn't use the -out option to save this plan, so Terraform can't
+guarantee to take exactly these actions if you run "terraform apply" now.
