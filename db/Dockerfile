@@ -5,6 +5,9 @@
 # es decir, la primera vez que arranca con un volumen nuevo.
 FROM postgres:16-alpine
 
+# gosu no es necesario porque el contenedor se ejecuta como postgres.
+RUN rm -f /usr/local/bin/gosu
+
 COPY init/ /docker-entrypoint-initdb.d/
 
 USER postgres
